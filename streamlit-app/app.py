@@ -2,9 +2,46 @@ import streamlit as st
 import requests
 from PIL import Image
 import io
+import subprocess
+import sys
+import time
+import os
 
 # API Configuration
 ML_API_URL = "http://localhost:8000"
+
+# Auto-start ML Service (for Streamlit Cloud)
+@st.cache_resource
+def start_ml_service():
+    # Check if we are running on Streamlit Cloud (or just want to ensure it runs)
+    # We will try to start it if it feels like it's not running, or just run it blindly
+    # since uvicorn inside main.py usually handles port binding.
+    
+    # Path to the ml-service main.py
+    # Assuming app.py is in streamlit-app/ and main.py is in ml-service/
+    ml_service_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "ml-service", "main.py"))
+    
+    if not os.path.exists(ml_service_path):
+        st.error(f"Cannot find ML service at {ml_service_path}")
+        return None
+
+    # Start the process
+    # We use sys.executable to ensure we use the same python interpreter (with installed deps)
+    process = subprocess.Popen(
+        [sys.executable, ml_service_path],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        cwd=os.path.dirname(ml_service_path) # Set CWD to ml-service dir so it finds its .env and models
+    )
+    
+    # Give it a moment to start
+    time.sleep(5)
+    return process
+
+# Initialize service
+start_ml_service()
+
 
 st.set_page_config(
     page_title="HealthTrust - AI Fraud Detection",

@@ -25,6 +25,22 @@ def start_ml_service():
         st.error(f"Cannot find ML service at {ml_service_path}")
         return None
 
+    # Get API key from secrets (Cloud) or environment (Local)
+    api_key = None
+    try:
+        if "OPENAI_API_KEY" in st.secrets:
+            api_key = st.secrets["OPENAI_API_KEY"]
+    except FileNotFoundError:
+        pass  # No secrets.toml found, likely running locally without it
+
+    if not api_key:
+        api_key = os.getenv("OPENAI_API_KEY")
+
+    # Prepare environment variables for the subprocess
+    env = os.environ.copy()
+    if api_key:
+        env["OPENAI_API_KEY"] = api_key
+    
     # Start the process
     # We use sys.executable to ensure we use the same python interpreter (with installed deps)
     process = subprocess.Popen(
@@ -32,12 +48,14 @@ def start_ml_service():
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        cwd=os.path.dirname(ml_service_path) # Set CWD to ml-service dir so it finds its .env and models
+        cwd=os.path.dirname(ml_service_path), # Set CWD to ml-service dir
+        env=env # Pass environment variables including API key
     )
     
     # Give it a moment to start
     time.sleep(5)
     return process
+
 
 # Initialize service
 start_ml_service()

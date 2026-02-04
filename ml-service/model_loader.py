@@ -1,6 +1,7 @@
 """
 ML Model Loader for Cardano Insurance dApp
 Loads the pre-trained Gradient Boosting model and handles feature engineering
+Auto-retrains using synthetic data if model loading fails (e.g. version mismatch)
 """
 
 import pickle
@@ -8,6 +9,17 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 from typing import Dict, List
+import logging
+
+try:
+    from train_synthetic import train_and_save
+except ImportError:
+    # Handle case where it might be imported from different context
+    import sys
+    sys.path.append(str(Path(__file__).parent))
+    from train_synthetic import train_and_save
+
+logger = logging.getLogger(__name__)
 
 
 class FraudDetectionModel:
@@ -46,7 +58,30 @@ class FraudDetectionModel:
             print(f"  - Features: {self.metadata['n_features']}")
             
         except Exception as e:
-            raise RuntimeError(f"Failed to load model artifacts: {e}")
+            print(f"⚠️ Failed to load model artifacts: {e}")
+            print("🔄 Triggering automatic retraining with synthetic data...")
+            
+            try:
+                # Retrain model
+                train_and_save()
+                
+                # Try loading again (recursive call, but just once effectively)
+                # We do it manually to avoid infinite recursion risk if training fails too
+                with open(self.models_dir / 'best_model.pkl', 'rb') as f:
+                    self.model = pickle.load(f)
+                with open(self.models_dir / 'scaler.pkl', 'rb') as f:
+                    self.scaler = pickle.load(f)
+                with open(self.models_dir / 'feature_names.pkl', 'rb') as f:
+                    self.feature_names = pickle.load(f)
+                with open(self.models_dir / 'metadata.pkl', 'rb') as f:
+                    self.metadata = pickle.load(f)
+                    
+                print(f"✅ Recovery successful! New model trained and loaded.")
+                
+            except Exception as train_error:
+                error_msg = f"CRITICAL: Failed to retrain model: {train_error}"
+                print(error_msg)
+                raise RuntimeError(error_msg) from e
     
     def preprocess_input(self, amount_billed: float, age: int, gender: str, diagnosis: str) -> pd.DataFrame:
         """

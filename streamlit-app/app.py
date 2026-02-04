@@ -7,6 +7,13 @@ import sys
 import time
 import os
 
+st.set_page_config(
+    page_title="HealthTrust - AI Fraud Detection",
+    page_icon="🏥",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # API Configuration
 ML_API_URL = "http://localhost:8000"
 
@@ -61,12 +68,7 @@ def start_ml_service():
 start_ml_service()
 
 
-st.set_page_config(
-    page_title="HealthTrust - AI Fraud Detection",
-    page_icon="🏥",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+
 
 # Custom CSS
 st.markdown("""

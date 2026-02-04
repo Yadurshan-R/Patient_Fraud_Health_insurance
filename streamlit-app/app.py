@@ -60,7 +60,8 @@ def start_ml_service():
     )
     
     # Give it a moment to start
-    time.sleep(5)
+    time.sleep(10) # Increased wait time to 10s
+
     
     # Check if it died immediately
     if process.poll() is not None:
@@ -75,12 +76,32 @@ def start_ml_service():
 # Initialize service
 ml_process = start_ml_service()
 
-# Subprocess Health Check
-if ml_process and ml_process.poll() is not None:
-    st.sidebar.error("❌ ML Process Crashed")
-    # Try to capture output if possible (though communicate can only be called once)
-    # We'll rely on the startup check or adding a separate thread reader if needed later.
-    st.sidebar.warning("Refresh the app to restart logic.")
+# Subprocess Health Check & Debugging
+if 'ml_process' in locals() and ml_process:
+    if ml_process.poll() is not None:
+        st.sidebar.error("❌ Process Crashed")
+        stdout, stderr = ml_process.communicate()
+        st.sidebar.error(f"Exit: {ml_process.returncode}")
+        if stderr:
+            st.sidebar.code(stderr[-200:]) # Show last 200 chars
+    else:
+        st.sidebar.success(f"✅ PID: {ml_process.pid} (Running)")
+else:
+    st.sidebar.warning("⚠️ No ML Process Tracked")
+
+# Debugging Button
+if st.sidebar.button("Show Process Logs"):
+    if 'ml_process' in locals() and ml_process:
+        st.sidebar.text("Reading logs...")
+        # Note: communicate() would block, so we can't easily read continuously without threads.
+        # But if it's dead, we can read.
+        if ml_process.poll() is not None:
+             o, e = ml_process.communicate()
+             st.sidebar.text(o)
+             st.sidebar.text(e)
+        else:
+             st.sidebar.info("Process is alive. Logs accessible only if it stops.")
+
 
 
 

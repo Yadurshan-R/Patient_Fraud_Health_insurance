@@ -61,11 +61,27 @@ def start_ml_service():
     
     # Give it a moment to start
     time.sleep(5)
+    
+    # Check if it died immediately
+    if process.poll() is not None:
+        stdout, stderr = process.communicate()
+        st.error(f"❌ ML Service Failed to Start!")
+        st.code(f"Exit Code: {process.returncode}\n\nSTDOUT:\n{stdout}\n\nSTDERR:\n{stderr}")
+        return None
+
     return process
 
 
 # Initialize service
-start_ml_service()
+ml_process = start_ml_service()
+
+# Subprocess Health Check
+if ml_process and ml_process.poll() is not None:
+    st.sidebar.error("❌ ML Process Crashed")
+    # Try to capture output if possible (though communicate can only be called once)
+    # We'll rely on the startup check or adding a separate thread reader if needed later.
+    st.sidebar.warning("Refresh the app to restart logic.")
+
 
 
 
